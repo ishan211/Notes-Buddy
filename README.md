@@ -12,7 +12,7 @@ Through this project I was able to refine my JS skills and design skills and wor
 
 
 ### How to use Notes Buddy:
-1) Clone the repo: ```git clone https://github.com/ishan211/notes-buddy.git```
+1) Clone the repo: `git clone https://github.com/ishan211/notes-buddy.git`
 2) Open the .html file in your browser
 3) Toggle Dark Mode on or off to change the aesthetic of the app 
 
