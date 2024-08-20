@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notes Buddy</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: var(--container-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        h1 {
+            text-align: center;
+        }
+        .note {
+            background-color: var(--note-bg);
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid var(--note-border);
+            position: relative;
+            transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+        }
+        .note button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            cursor: pointer;
+        }
+        .note .edit {
+            position: absolute;
+            top: 10px;
+            right: 40px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            cursor: pointer;
+        }
+        #noteForm {
+            display: flex;
+            flex-direction: column;
+        }
+        #noteForm input, #noteForm textarea {
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid var(--input-border);
+            border-radius: 5px;
+            background-color: var(--input-bg);
+            color: var(--input-text);
+            transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+        }
+        #noteForm button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        #searchBar {
+            margin-bottom: 20px;
+            padding: 10px;
+            width: 100%;
+            border: 1px solid var(--input-border);
+            border-radius: 5px;
+            background-color: var(--input-bg);
+            color: var(--input-text);
+            transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+        }
+        /* Dark Mode Variables */
+        :root {
+            --container-bg: #fff;
+            --note-bg: #fafafa;
+            --note-border: #ddd;
+            --input-bg: #fff;
+            --input-border: #ddd;
+            --input-text: #000;
+            --text-color: #000;
+            --background-color: #f4f4f4;
+        }
+        /* Light Mode Variables */
+        body.dark-mode {
+            --container-bg: #333;
+            --note-bg: #444;
+            --note-border: #555;
+            --input-bg: #555;
+            --input-border: #777;
+            --input-text: #fff;
+            --text-color: #fff;
+            --background-color: #222;
+        }
+        /* Toggle Switch Styles */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+            margin-bottom: 20px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #2196F3;
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        /* Label for dark mode */
+        .toggle-label {
+            margin-left: 10px;
+            vertical-align: middle;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Notes Buddy</h1>
+    
+    <div>
+        <label class="toggle-switch">
+            <input type="checkbox" id="modeToggle">
+            <span class="slider"></span>
+        </label>
+        <span class="toggle-label">Dark Mode</span>
+    </div>
+
+    <input type="text" id="searchBar" placeholder="Search your notes...">
+    
+    <form id="noteForm">
+        <input type="text" id="noteTitle" placeholder="Title" required>
+        <textarea id="noteContent" rows="4" placeholder="Write your note here..." required></textarea>
+        <button type="submit">Add Note</button>
+    </form>
+
+    <div id="notesContainer"></div>
+</div>
+
+<script>
+    let editIndex = null;
+
+    document.getElementById('noteForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const title = document.getElementById('noteTitle').value;
+        const content = document.getElementById('noteContent').value;
+        const note = { title, content };
+
+        if (editIndex !== null) {
+            updateNoteInLocalStorage(note, editIndex);
+            editIndex = null;
+        } else {
+            saveNoteToLocalStorage(note);
+        }
+
+        clearForm();
+        loadNotesFromLocalStorage();
+    });
+
+    document.getElementById('searchBar').addEventListener('input', function() {
+        loadNotesFromLocalStorage(this.value);
+    });
+
+    document.getElementById('modeToggle').addEventListener('change', function() {
+        document.body.classList.toggle('dark-mode', this.checked);
+        localStorage.setItem('darkMode', this.checked);
+    });
+
+    function addNoteToDOM(note, index) {
+        const noteContainer = document.getElementById('notesContainer');
+
+        const noteDiv = document.createElement('div');
+        noteDiv.classList.add('note');
+        
+        const noteTitle = document.createElement('h2');
+        noteTitle.textContent = note.title;
+
+        const noteContent = document.createElement('p');
+        noteContent.textContent = note.content;
+
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = '×';
+        deleteButton.addEventListener('click', function() {
+            noteContainer.removeChild(noteDiv);
+            deleteNoteFromLocalStorage(index);
+        });
+
+        const editButton = document.createElement('button');
+        editButton.textContent = '✎';
+        editButton.classList.add('edit');
+        editButton.addEventListener('click', function() {
+            editIndex = index;
+            document.getElementById('noteTitle').value = note.title;
+            document.getElementById('noteContent').value = note.content;
+        });
+
+        noteDiv.appendChild(noteTitle);
+        noteDiv.appendChild(noteContent);
+        noteDiv.appendChild(editButton);
+        noteDiv.appendChild(deleteButton);
+        
+        noteContainer.appendChild(noteDiv);
+    }
+
+    function clearForm() {
+        document.getElementById('noteTitle').value = '';
+        document.getElementById('noteContent').value = '';
+    }
+
+    function saveNoteToLocalStorage(note) {
+        let notes = JSON.parse(localStorage.getItem('notes')) || [];
+        notes.push(note);
+        localStorage.setItem('notes', JSON.stringify(notes));
+    }
+
+    function updateNoteInLocalStorage(note, index) {
+        let notes = JSON.parse(localStorage.getItem('notes')) || [];
+        notes[index] = note;
+        localStorage.setItem('notes', JSON.stringify(notes));
+    }
+
+    function deleteNoteFromLocalStorage(index) {
+        let notes = JSON.parse(localStorage.getItem('notes')) || [];
+        notes.splice(index, 1);
+        localStorage.setItem('notes', JSON.stringify(notes));
+    }
+
+    function loadNotesFromLocalStorage(searchQuery = '') {
+        let notes = JSON.parse(localStorage.getItem('notes')) || [];
+        const noteContainer = document.getElementById('notesContainer');
+        noteContainer.innerHTML = ''; // Clear current notes in DOM
+
+        notes
+            .filter(note => note.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            note.content.toLowerCase().includes(searchQuery.toLowerCase()))
+            .forEach((note, index) => addNoteToDOM(note, index));
+    }
+
+    function initializeMode() {
+        const darkMode = JSON.parse(localStorage.getItem('darkMode'));
+        document.body.classList.toggle('dark-mode', darkMode);
+        document.getElementById('modeToggle').checked = darkMode;
+    }
+
+    // Load notes and initialize mode when the page is loaded
+    window.onload = function() {
+        loadNotesFromLocalStorage();
+        initializeMode();
+    };
+</script>
+
+</body>
+</html>
